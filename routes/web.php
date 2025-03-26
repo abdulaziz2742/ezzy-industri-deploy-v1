@@ -198,4 +198,6 @@ Route::get('/whatsapp/send-simple-test', function () {
     }
 })->name('whatsapp.send-simple-test');
 
-Route::post('/upload-image', [ImageUploadController::class, 'store'])->name('upload.image');
+Route::post('/upload-image', [ImageUploadController::class, 'store'])
+    ->name('upload.image')
+    ->middleware(['auth', 'web']); // Tambah middleware auth dan web
