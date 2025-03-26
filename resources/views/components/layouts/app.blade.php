@@ -16,7 +16,7 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 
 
        <!-- Template Main CSS File -->
@@ -184,6 +184,8 @@
         {{ $slot }}
     </main>
 
+    <!-- Keep the head section until footer -->
+
     <footer id="footer" class="footer">
         <div class="copyright">
             &copy; {{ date('Y') }} <strong><span>EzzyIndustri</span></strong>. All Rights Reserved
@@ -194,56 +196,45 @@
         <i class="bi bi-arrow-up-short"></i>
     </a>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-    <script>
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
-    });
-    </script>
-
- 
-
-@livewireScripts
-<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        Livewire.on('swal-confirm', (data) => {
-            Swal.fire({
-                title: data.title || 'Konfirmasi',
-                text: data.text || 'Apakah Anda yakin?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: data.confirmText || 'Ya, lanjutkan',
-                cancelButtonText: data.cancelText || 'Batal',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Ganti emit dengan dispatch untuk Livewire v3
-                    Livewire.dispatch('showNGForm');
-                }
-            });
-        });
-    });
-</script>
-
-
+    <!-- Consolidated Scripts Section -->
+    @livewireScripts
     
-
+    <!-- Essential Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    
+    <!-- Toast Configuration -->
     <script>
-        window.addEventListener('show-problem-modal', event => {
-            $('#reportProblemModal').modal('show');
-        });
-
-        window.addEventListener('hide-problem-modal', event => {
-            $('#reportProblemModal').modal('hide');
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
         });
     </script>
 
+    <!-- Event Listeners -->
     <script>
         document.addEventListener('livewire:initialized', () => {
+            // SweetAlert Confirmation
+            Livewire.on('swal-confirm', (data) => {
+                Swal.fire({
+                    title: data.title || 'Konfirmasi',
+                    text: data.text || 'Apakah Anda yakin?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: data.confirmText || 'Ya, lanjutkan',
+                    cancelButtonText: data.cancelText || 'Batal',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Livewire.dispatch('showNGForm');
+                    }
+                });
+            });
+
+            // Problem Modal Handlers
             Livewire.on('show-problem-modal', () => {
                 const modal = document.getElementById('reportProblemModal');
                 const bootstrapModal = new bootstrap.Modal(modal);
@@ -259,36 +250,21 @@
             });
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- sweet JS Files -->
-    <script src="/assets/js/sweet-alert-handlers.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Vendor JS Files -->
+    <!-- Vendor Libraries -->
     <script src="/assets/vendor/apexcharts/apexcharts.min.js"></script>
-    <script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/vendor/chart.js/chart.umd.js"></script>
     <script src="/assets/vendor/echarts/echarts.min.js"></script>
     <script src="/assets/vendor/simple-datatables/simple-datatables.js"></script>
     <script src="/assets/vendor/tinymce/tinymce.min.js"></script>
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    <script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Template Main JS File -->
+
+    <!-- Custom Scripts -->
     <script src="/assets/js/main.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sweet-alert-handlers.js"></script>
+
+    <!-- Report Problem Component -->
     <livewire:karyawan.production.report-problem />
-    <script src="/assets/vendor/apexcharts/apexcharts.min.js"></script>
-    
-    <!-- Di bagian head atau sebelum closing body -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/vendor/chart.js/chart.umd.js"></script>
-    <script src="/assets/vendor/echarts/echarts.min.js"></script>
-    <!-- Di bagian scripts -->
-<script src="{{ asset('assets/js/sweet-alert-handlers.js') }}"></script>
 
     @stack('scripts')
 </body>
