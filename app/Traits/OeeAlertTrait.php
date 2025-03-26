@@ -15,129 +15,123 @@ trait OeeAlertTrait
     protected function checkAndSendOeeAlert($machine, $oeeScore, $productionId = null)
     {
         try {
-            // Tambahkan log untuk debugging dengan lebih detail
+            // Pastikan machine tidak null
+            if (!$machine) {
+                Log::error("OEE Alert skipped: machine is null");
+                return false;
+            }
+
+            // Log untuk debugging dengan null checks
             Log::info("Checking OEE alert conditions", [
-                'machine' => $machine->name,
+                'machine' => $machine->name ?? 'Unknown',
                 'oee_score' => $oeeScore,
-                'target' => $machine->oee_target,
-                'alert_enabled' => $machine->alert_enabled,
+                'target' => $machine->oee_target ?? 'Unknown',
+                'alert_enabled' => $machine->alert_enabled ?? false,
                 'production_id' => $productionId,
-                'alert_email' => $machine->alert_email,
-                'alert_phone' => $machine->alert_phone,
+                'alert_email' => $machine->alert_email ?? null,
+                'alert_phone' => $machine->alert_phone ?? null,
                 'is_test' => $productionId === null
             ]);
 
             // Jika alert tidak diaktifkan, keluar
-            if (!$machine->alert_enabled) {
-                Log::info("OEE Alert skipped: alerts not enabled for machine {$machine->name}");
+            if (!($machine->alert_enabled ?? false)) {
+                Log::info("OEE Alert skipped: alerts not enabled for machine " . ($machine->name ?? 'Unknown'));
                 return false;
             }
 
             // Periksa apakah email atau nomor telepon dikonfigurasi
             if (empty($machine->alert_email) && empty($machine->alert_phone)) {
-                Log::warning("OEE Alert skipped: no email or phone configured for machine {$machine->name}");
+                Log::warning("OEE Alert skipped: no email or phone configured for machine " . ($machine->name ?? 'Unknown'));
                 return false;
             }
 
-            // PENTING: Jika ada production ID, periksa apakah produksi sudah selesai
+            // Cek production jika ada ID
             if ($productionId) {
                 $production = Production::find($productionId);
                 
-                // Log status produksi dengan detail
                 Log::info("Production status check", [
                     'production_id' => $productionId,
                     'production_found' => $production ? 'yes' : 'no',
-                    'end_time' => $production ? ($production->end_time ? $production->end_time->format('Y-m-d H:i:s') : 'not ended') : 'N/A',
-                    'status' => $production ? $production->status : 'N/A'
+                    'end_time' => $production ? $production->end_time : null,
+                    'status' => $production ? $production->status : null
                 ]);
-                
-                // PERUBAHAN: Kirim notifikasi bahkan jika produksi belum selesai jika OEE sangat rendah (di bawah 10%)
-                $isVeryLowOee = $oeeScore < 10;
-                
-                if (!$production || (!$production->end_time && !$isVeryLowOee)) {
-                    Log::info("OEE Alert skipped: production not ended yet and OEE not critically low");
-                    return false; // Produksi belum selesai, jangan kirim notifikasi kecuali OEE sangat rendah
+
+                if (!$production) {
+                    Log::info("OEE Alert skipped: production not found");
+                    return false;
                 }
-                
-                // Check if we already sent an alert for this production
-                $alertExists = OeeAlert::where('production_id', $productionId)
+
+                // Cek apakah alert sudah pernah dikirim
+                $existingAlert = OeeAlert::where('production_id', $productionId)
                     ->where('machine_id', $machine->id)
                     ->exists();
                 
-                if ($alertExists) {
+                if ($existingAlert) {
                     Log::info("OEE Alert skipped: alert already sent for this production");
-                    return false; // Alert already sent for this production
+                    return false;
                 }
             }
 
-            // Check if OEE is below target
-            if ($oeeScore < $machine->oee_target || $productionId === null) {
+            // Cek OEE di bawah target
+            $targetOee = $machine->oee_target ?? 85.00; // Default target if not set
+            if ($oeeScore < $targetOee) {
                 Log::info("OEE is below target, preparing to send alerts", [
                     'oee_score' => $oeeScore,
-                    'oee_target' => $machine->oee_target
+                    'oee_target' => $targetOee
                 ]);
-                
-                // Log this alert to prevent duplicates
+
+                // Buat record alert
                 if ($productionId) {
                     OeeAlert::create([
                         'production_id' => $productionId,
                         'machine_id' => $machine->id,
                         'oee_score' => $oeeScore,
-                        'target_oee' => $machine->oee_target,
+                        'target_oee' => $targetOee,
                         'sent_at' => now(),
                     ]);
                     Log::info("OEE Alert record created in database");
                 }
-                
-                // Send email notification if email is configured
+
+                // Kirim email jika ada
                 if (!empty($machine->alert_email)) {
                     try {
                         Notification::route('mail', $machine->alert_email)
-                            ->notify(new OeeAlertNotification($machine, $oeeScore, $machine->oee_target, $productionId));
-                        
-                        Log::info("OEE Alert email sent for machine {$machine->name} with score {$oeeScore}%");
+                            ->notify(new OeeAlertNotification($machine, $oeeScore, $targetOee, $productionId));
+                        Log::info("OEE Alert email sent for machine " . ($machine->name ?? 'Unknown') . " with score {$oeeScore}%");
                     } catch (\Exception $emailError) {
                         Log::error("Email error: " . $emailError->getMessage());
                     }
-                } else {
-                    Log::info("Email alert skipped: no email configured for machine {$machine->name}");
                 }
-                
-                // Send WhatsApp notification if phone is configured
+
+                // Kirim WhatsApp jika ada
                 if (!empty($machine->alert_phone)) {
-                    Log::info("Preparing to send WhatsApp alert to {$machine->alert_phone}");
-                    
-                    $whatsappService = app(WhatsAppService::class);
-                    $production = $productionId ? Production::find($productionId) : null;
-                    
                     try {
+                        $whatsappService = app(WhatsAppService::class);
                         $result = $whatsappService->sendOeeAlert(
                             $machine->alert_phone,
                             $machine,
                             $oeeScore,
-                            $machine->oee_target,
-                            $production
+                            $targetOee,
+                            $production ?? null
                         );
                         
                         if ($result) {
-                            Log::info("OEE Alert WhatsApp sent for machine {$machine->name} with score {$oeeScore}%");
+                            Log::info("OEE Alert WhatsApp sent for machine " . ($machine->name ?? 'Unknown') . " with score {$oeeScore}%");
                         } else {
-                            Log::error("Failed to send WhatsApp alert for machine {$machine->name}");
+                            Log::error("Failed to send WhatsApp alert for machine " . ($machine->name ?? 'Unknown'));
                         }
                     } catch (\Exception $whatsappError) {
                         Log::error("WhatsApp error: " . $whatsappError->getMessage());
                     }
-                } else {
-                    Log::info("WhatsApp alert skipped: no phone number configured for machine {$machine->name}");
                 }
-                
+
                 return true;
-            } else {
-                Log::info("OEE Alert skipped: OEE score {$oeeScore} is not below target {$machine->oee_target}");
-                return false;
             }
+
+            Log::info("OEE Alert skipped: OEE score {$oeeScore} is not below target {$targetOee}");
+            return false;
         } catch (\Exception $e) {
-            Log::error("Error sending OEE Alert: " . $e->getMessage());
+            Log::error("Error in checkAndSendOeeAlert: " . $e->getMessage());
             Log::error($e->getTraceAsString());
             return false;
         }

@@ -50,12 +50,17 @@ class QualityCheckForm extends Component
     $this->dispatch('closeNGModal');
     }
     
+    public $qualityCheckHistory = [];
+    public $totalChecksNeeded;
+    public $currentProgress;
+    
     public function mount($productionId = null, $stepId = null)
     {
         $this->productionId = $productionId;
         $this->stepId = $stepId; // Pastikan stepId diinisialisasi di sini
         $this->production = Production::with(['product', 'shift'])->findOrFail($productionId);
         $this->loadSop();
+        $this->loadQualityCheckHistory();
     }
 
     public function checkMeasurement($stepId)
@@ -163,51 +168,47 @@ public function saveNGData()
     ]);
 
     try {
-        // Gunakan data dari array ngData
-        Log::info('Saving NG data', [
-            'count' => $this->ngData['count'],
-            'type' => $this->ngData['type'],
-            'notes' => $this->ngData['notes'],
-            'step_id' => $this->ngData['step_id']
-        ]);
-        
-        // Simpan data NG ke database
+        DB::beginTransaction();
+
+        // Buat quality check baru untuk setiap pemeriksaan
         $qualityCheck = QualityCheck::create([
             'production_id' => $this->productionId,
-            'step_id' => $this->ngData['step_id'],
-            'defect_count' => $this->ngData['count'],
-            'defect_type' => $this->ngData['type'],
-            'notes' => $this->ngData['notes'],
             'user_id' => Auth::id(),
             'check_time' => now(),
+            'sample_size' => $this->sampleSize,
             'status' => 'ng',
-            'sample_size' => $this->sampleSize ?? 1, // Add sample_size field with default value 1
+            'defect_count' => $this->ngData['count'],
+            'defect_type' => $this->ngData['type'],
+            'defect_notes' => $this->ngData['notes']
         ]);
-        
-        // Segera update OEE record setelah menyimpan data NG
-        Log::info('Updating OEE record after quality check', [
-            'production_id' => $this->productionId,
-            'has_ng' => true
-        ]);
-        
-        // Update OEE record
-        $oeeRecord = OeeRecord::updateFromProduction($this->productionId);
-        
-    } catch (\Exception $e) {
-        Log::error('Error saving NG data: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString()
-        ]);
-        session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
-        return;
-    }
 
-    $this->showNGModal = false;
-    
-    // Simpan data quality check dengan status NG
-    $this->saveCheck();
-    
-    // Redirect ke halaman production status
-    return redirect()->route('production.status')->with('success', 'Data quality check berhasil disimpan');
+        // Simpan detail pengukuran
+        foreach ($this->measurements as $stepId => $value) {
+            $step = $this->sop->steps->where('id', $stepId)->first();
+            if ($step) {
+                QualityCheckDetail::create([
+                    'quality_check_id' => $qualityCheck->id,
+                    'parameter' => $step->judul,
+                    'standard_value' => $step->nilai_standar,
+                    'measured_value' => $value,
+                    'tolerance_min' => $step->toleransi_min,
+                    'tolerance_max' => $step->toleransi_max,
+                    'status' => $stepId == $this->ngData['step_id'] ? 'ng' : 'ok'
+                ]);
+            }
+        }
+
+        DB::commit();
+        
+        $this->showNGModal = false;
+        $this->dispatch('closeNGModal');
+        $this->redirect(route('production.status'));
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("Error saving NG data: " . $e->getMessage());
+        session()->flash('error', 'Terjadi kesalahan saat menyimpan data NG');
+    }
 }
 
 
@@ -235,97 +236,149 @@ public function saveNGData()
                         'min' => $step->toleransi_min,
                         'max' => $step->toleransi_max,
                         'unit' => $step->measurement_unit,
-                        'type' => $step->measurement_type
+                        'type' => $step->measurement_type,
+                        'cloudinary_url' => $step->cloudinary_url,
+                        'cloudinary_id' => $step->cloudinary_id
                     ];
                 })->toArray();
         }
     }
 
-public function saveCheck()
-{
-    try {
-        DB::beginTransaction();
 
-        $qualityCheck = QualityCheck::create([
+
+    public function loadQualityCheckHistory()
+    {
+        // Get the collection first
+        $qualityChecks = QualityCheck::where('production_id', $this->productionId)
+            ->with(['details' => function($query) {
+                $query->orderBy('id', 'asc');
+            }, 'user'])
+            ->orderBy('check_time', 'desc')
+            ->get();
+            
+        // Calculate progress before converting to array
+        if ($this->sop) {
+            $interval = $this->sop->interval ?? 10;
+            $target = $this->sop->target ?? 80;
+            $this->totalChecksNeeded = ceil($target / $interval);
+            $this->currentProgress = $qualityChecks->count();
+        }
+
+        // Log the details while it's still a collection
+        Log::info('Quality Check History loaded', [
             'production_id' => $this->productionId,
-            'user_id' => Auth::id(),
-            'sample_size' => $this->sampleSize,
-            'notes' => $this->notes,
-            'check_time' => now(),
-            'status' => $this->hasNG ? 'ng' : 'ok',
-            'defect_count' => $this->ngData['count'],
-            'defect_type' => $this->ngData['type'],
-            'defect_notes' => $this->ngData['notes']
+            'history_count' => $qualityChecks->count(),
+            'details_count' => $qualityChecks->flatMap->details->count()
         ]);
 
-        foreach ($this->measurements as $stepId => $value) {
-            $step = $this->sop->steps->where('id', $stepId)->first();
-            
-            if ($step) {
-                // Perbaikan konversi nilai desimal
-                $measuredValue = $this->convertToDecimal($value);
-                $minValue = $this->convertToDecimal($step->toleransi_min);
-                $maxValue = $this->convertToDecimal($step->toleransi_max);
-                $standardValue = $this->convertToDecimal($step->nilai_standar);
-                
-                $epsilon = $measuredValue < 0.1 ? 0.00001 : 0.001;
-                $status = ($measuredValue >= ($minValue - $epsilon) && $measuredValue <= ($maxValue + $epsilon)) ? 'ok' : 'ng';
-
-                // Di method saveCheck dan saveNGData, ubah bagian pembuatan QualityCheckDetail
-                QualityCheckDetail::create([
-                    'quality_check_id' => $qualityCheck->id,
-                    'parameter' => $step->judul,
-                    'standard_value' => $this->convertToDecimal($step->nilai_standar),
-                    'measured_value' => $this->convertToDecimal($value),
-                    'tolerance_min' => $this->convertToDecimal($step->toleransi_min),
-                    'tolerance_max' => $this->convertToDecimal($step->toleransi_max),
-                    'status' => $status
-                ]);
-            }
-        }
-
-        DB::commit();
-        
-        // Update OEE Record secara real-time
+        // Convert to array after using collection methods
+        $this->qualityCheckHistory = $qualityChecks->toArray();
+    }
+    // Add this to refresh history after saving
+    public function saveCheck()
+    {
         try {
-            Log::info('Updating OEE record after quality check', [
-                'production_id' => $this->productionId,
-                'has_ng' => $this->hasNG
-            ]);
+            DB::beginTransaction();
+    
+            // Reset hasNG flag dan cek ulang status berdasarkan measurements
+            $this->hasNG = false;
+            $hasNGMeasurements = false;
+    
+            // Cek setiap measurement
+            foreach ($this->measurements as $stepId => $value) {
+                $step = $this->sop->steps->where('id', $stepId)->first();
+                if ($step) {
+                    $measuredValue = $this->convertToDecimal($value);
+                    $minValue = $this->convertToDecimal($step->toleransi_min);
+                    $maxValue = $this->convertToDecimal($step->toleransi_max);
+                    
+                    $epsilon = $measuredValue < 0.1 ? 0.00001 : 0.001;
+                    if ($measuredValue < ($minValue - $epsilon) || $measuredValue > ($maxValue + $epsilon)) {
+                        $hasNGMeasurements = true;
+                        break;
+                    }
+                }
+            }
+    
+            // HAPUS bagian ini yang mencari existing check
+            // $existingCheck = QualityCheck::where('production_id', $this->productionId)->first();
             
-            // Panggil metode updateFromProduction di model OeeRecord
-            OeeRecord::updateFromProduction($this->productionId);
-        } catch (\Exception $e) {
-            Log::error('Error updating OEE record after quality check: ' . $e->getMessage(), [
-                'production_id' => $this->productionId
+            // LANGSUNG buat quality check baru untuk setiap pemeriksaan
+            $qualityCheck = QualityCheck::create([
+                'production_id' => $this->productionId,
+                'user_id' => Auth::id(),
+                'check_time' => now(),
+                'sample_size' => $this->sampleSize,
+                'status' => $hasNGMeasurements ? 'ng' : 'ok',
+                'notes' => $this->notes,
+                'defect_count' => $hasNGMeasurements ? ($this->ngData['count'] ?? 0) : 0,
+                'defect_type' => $hasNGMeasurements ? ($this->ngData['type'] ?? '') : null,
+                'defect_notes' => $hasNGMeasurements ? ($this->ngData['notes'] ?? '') : null
             ]);
+    
+            // Simpan detail measurements
+            foreach ($this->measurements as $stepId => $value) {
+                $step = $this->sop->steps->where('id', $stepId)->first();
+                
+                if ($step) {
+                    $measuredValue = $this->convertToDecimal($value);
+                    $minValue = $this->convertToDecimal($step->toleransi_min);
+                    $maxValue = $this->convertToDecimal($step->toleransi_max);
+                    $standardValue = $this->convertToDecimal($step->nilai_standar);
+                    
+                    $epsilon = $measuredValue < 0.1 ? 0.00001 : 0.001;
+                    $status = ($measuredValue >= ($minValue - $epsilon) && $measuredValue <= ($maxValue + $epsilon)) ? 'ok' : 'ng';
+    
+                    QualityCheckDetail::create([
+                        'quality_check_id' => $qualityCheck->id,
+                        'parameter' => $step->judul,
+                        'standard_value' => $standardValue,
+                        'measured_value' => $measuredValue,
+                        'tolerance_min' => $minValue,
+                        'tolerance_max' => $maxValue,
+                        'status' => $status
+                    ]);
+                }
+            }
+    
+            DB::commit();
+            
+            // Update OEE Record
+            try {
+                $oeeRecord = OeeRecord::where('production_id', $this->production->id)->first();
+                if (!$oeeRecord) {
+                    $oeeRecord = new OeeRecord();
+                }
+                $oeeRecord->updateFromProduction($this->production);
+            } catch (\Exception $e) {
+                Log::error('Error updating OEE record: ' . $e->getMessage());
+            }
+            
+            session()->flash('success', 'Data pemeriksaan kualitas berhasil disimpan');
+            return redirect()->route('production.status');
+    
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Quality Check Error: ' . $e->getMessage());
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    // Tambahkan fungsi helper untuk konversi nilai desimal dengan presisi yang tepat
+    private function convertToDecimal($value)
+    {
+        // Hapus semua spasi
+        $value = trim($value);
+        
+        // Ganti koma dengan titik untuk format desimal
+        $value = str_replace(',', '.', $value);
+        
+        // Pastikan nilai adalah numerik
+        if (is_numeric($value)) {
+            // Kembalikan nilai sebagai string untuk mempertahankan presisi
+            return $value;
         }
         
-        session()->flash('success', 'Data pemeriksaan kualitas berhasil disimpan');
-        return redirect()->route('production.status');
-
-    } catch (\Exception $e) {
-        DB::rollback();
-        Log::error('Quality Check Error: ' . $e->getMessage());
-        session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        return '0'; // Default jika tidak valid
     }
-}
-
-// Tambahkan fungsi helper untuk konversi nilai desimal dengan presisi yang tepat
-private function convertToDecimal($value)
-{
-    // Hapus semua spasi
-    $value = trim($value);
-    
-    // Ganti koma dengan titik untuk format desimal
-    $value = str_replace(',', '.', $value);
-    
-    // Pastikan nilai adalah numerik
-    if (is_numeric($value)) {
-        // Kembalikan nilai sebagai string untuk mempertahankan presisi
-        return $value;
     }
-    
-    return '0'; // Default jika tidak valid
-}
-}

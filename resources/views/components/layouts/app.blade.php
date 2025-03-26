@@ -98,8 +98,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('manajerial.oee-dashboard') ? '' : 'collapsed' }}" 
-                       href="{{ route('manajerial.oee-dashboard') }}" wire:navigate>
+                    <!-- If there's a sidebar link to OEE Dashboard, update it -->
+                    <a class="nav-link {{ request()->routeIs('manajerial.oee.dashboard') ? '' : 'collapsed' }}" 
+                       href="{{ route('manajerial.oee.dashboard') }}" wire:navigate>
                         <i class="bi bi-speedometer2"></i>
                         <span>OEE Dashboard</span>
                     </a>
@@ -204,6 +205,8 @@
     });
     </script>
 
+ 
+
 @livewireScripts
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -228,7 +231,6 @@
 
 
     
-   
 
     <script>
         window.addEventListener('show-problem-modal', event => {
@@ -283,7 +285,6 @@
     
     <!-- Di bagian head atau sebelum closing body -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/oee-chart.js"></script>
     <script src="/assets/vendor/chart.js/chart.umd.js"></script>
     <script src="/assets/vendor/echarts/echarts.min.js"></script>
     <!-- Di bagian scripts -->

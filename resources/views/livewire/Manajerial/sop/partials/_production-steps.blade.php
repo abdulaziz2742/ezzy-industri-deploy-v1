@@ -17,7 +17,7 @@
                     <td>{{ $step->deskripsi }}</td>
                     <td class="text-center">
                         @if($step->gambar_path)
-                            <img src="{{ asset('storage/' . str_replace('public/', '', $step->gambar_path)) }}" 
+                            <img src="{{ $step->gambar_path }}" 
                                  alt="Step Image" 
                                  class="img-thumbnail" 
                                  style="max-height: 50px;">

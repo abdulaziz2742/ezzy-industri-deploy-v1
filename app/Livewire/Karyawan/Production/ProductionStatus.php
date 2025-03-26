@@ -12,11 +12,19 @@ use App\Models\ProductionDowntime;
 use App\Models\Sop;
 use App\Models\SopStep;
 use App\Models\QualityCheck;
+use App\Models\QualityCheckDetail;
+
 
 
 
 class ProductionStatus extends Component
 {
+    // Add these properties
+    public $downtimeReason;
+    public $problemDescription;
+
+    public $activeProduction;
+    public $qualityChecks;
     public $checkProgress = 0;
     public $completedChecks = 0;
     public $totalChecksNeeded = 0;
@@ -74,27 +82,24 @@ class ProductionStatus extends Component
     {
         $this->activeProduction = Production::where('user_id', Auth::id())
             ->whereIn('status', ['running', 'problem', 'waiting_approval', 'paused'])
-            ->with([
-                'checks' => function($query) {
-                    $query->with('details')->latest();
-                },
-                'sopChecks', 
-                'problems', 
-                'machine'
-            ])
             ->first();
     
         if ($this->activeProduction) {
             $this->calculateQualityProgress();
+            
+            // Update the query to properly load the relationships
+            $this->qualityChecks = QualityCheck::with(['details', 'user'])
+                ->where('production_id', $this->activeProduction->id)
+                ->orderBy('check_time', 'desc')
+                ->get();
         }
     
         return view('livewire.karyawan.production.production-status', [
             'activeProduction' => $this->activeProduction,
-            'qualityChecks' => $this->activeProduction ? $this->activeProduction->checks()->with('details')->latest()->get() : collect([])
+            'qualityChecks' => $this->qualityChecks ?? collect([])
         ]);
     }
 
-    public $activeProduction;
 
     protected $listeners = [
         'refresh-production-status' => '$refresh',
@@ -168,5 +173,19 @@ class ProductionStatus extends Component
 
         $this->activeProduction->refresh();
         $this->dispatch('refresh-production-status');
+    }
+
+    public function recordDowntime()
+    {
+        // ... your existing code ...
+        
+        $this->downtimeReason = ''; // Reset after successful submission
+    }
+    
+    public function reportProblem()
+    {
+        // ... your existing code ...
+        
+        $this->problemDescription = ''; // Reset after successful submission
     }
 }

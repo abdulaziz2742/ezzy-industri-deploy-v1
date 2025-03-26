@@ -101,30 +101,72 @@
                                     </td>
                                     <td>
                                         @if($task->requires_photo)
-                                            <div class="photo-upload-container p-2">
+                                            <div class="photo-upload-container p-2" x-data="{ 
+                                                isUploading: false,
+                                                handleImageUpload() {
+                                                    const formData = new FormData();
+                                                    const file = $refs.imageInput.files[0];
+                                                    
+                                                    if (!file) {
+                                                        alert('Pilih file terlebih dahulu');
+                                                        return;
+                                                    }
+                                                    
+                                                    formData.append('file', file);
+                                                    formData.append('folder', 'checksheet_tpm'); // Changed folder name
+                                                    this.isUploading = true;
+                                                    
+                                                    fetch('{{ route('upload.image') }}', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                                        },
+                                                        body: formData
+                                                    })
+                                                    .then(response => response.json())
+                                                    .then(data => {
+                                                        if (data.success) {
+                                                            @this.set('photos.' + {{ $task->id }}, {
+                                                                url: data.url,
+                                                                public_id: data.public_id
+                                                            });
+                                                            @this.set('previewUrl.' + {{ $task->id }}, data.url);
+                                                        } else {
+                                                            throw new Error(data.error || 'Upload gagal');
+                                                        }
+                                                    })
+                                                    .catch(error => {
+                                                        console.error('Error:', error);
+                                                        alert('Upload gagal: ' + error.message);
+                                                    })
+                                                    .finally(() => {
+                                                        this.isUploading = false;
+                                                    });
+                                                }
+                                            }">
                                                 @if(isset($previewUrl[$task->id]))
                                                     <div class="image-preview-wrapper mb-2">
                                                         <img src="{{ $previewUrl[$task->id] }}" 
                                                              class="img-preview"
                                                              alt="Preview"
-                                                             onclick="window.open(this.src)">
+                                                             onclick="window.open(this.src, '_blank')"
+                                                             style="cursor: pointer;">
                                                         <small class="d-block text-muted mt-1">Klik untuk memperbesar</small>
                                                     </div>
                                                 @endif
+                                                
                                                 <div class="upload-wrapper">
                                                     <input type="file" 
                                                            class="form-control form-control-sm" 
-                                                           wire:model="photos.{{ $task->id }}"
-                                                           accept="image/*"
-                                                           id="photo-{{ $task->id }}"
-                                                           wire:loading.attr="disabled">
-                                                    <div wire:loading wire:target="photos.{{ $task->id }}" 
-                                                         class="upload-loading">
-                                                        <div class="spinner-border spinner-border-sm text-primary" 
-                                                             role="status">
+                                                           x-ref="imageInput"
+                                                           @change="handleImageUpload()"
+                                                           accept="image/*">
+                                                    
+                                                    <div x-show="isUploading" class="upload-loading mt-2">
+                                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
                                                             <span class="visually-hidden">Loading...</span>
                                                         </div>
-                                                        <small>Mengupload...</small>
+                                                        <small class="ms-2">Mengupload foto...</small>
                                                     </div>
                                                 </div>
                                             </div>

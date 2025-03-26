@@ -128,14 +128,18 @@
                                                 @enderror
                                             </td>
                                             <td class="text-center">
-                                                @if($step->gambar_path)
-                                                    <img 
-                                                        src="{{ asset('storage/' . $step->gambar_path) }}"
-                                                        alt="Reference"
-                                                        class="img-thumbnail"
-                                                        style="height: 50px; cursor: pointer"
-                                                        onclick="window.open(this.src)"
-                                                    >
+                                                @if($step->cloudinary_url)
+                                                    <img src="{{ $step->cloudinary_url }}"
+                                                         alt="Reference"
+                                                         class="img-thumbnail"
+                                                         style="height: 50px; cursor: pointer"
+                                                         onclick="window.open(this.src, '_blank')">
+                                                @elseif($step->cloudinary_id)
+                                                    <img src="https://res.cloudinary.com/dncabigef/image/upload/{{ $step->cloudinary_id }}"
+                                                         alt="Reference"
+                                                         class="img-thumbnail"
+                                                         style="height: 50px; cursor: pointer"
+                                                         onclick="window.open(this.src, '_blank')">
                                                 @else
                                                     <span class="text-muted">-</span>
                                                 @endif

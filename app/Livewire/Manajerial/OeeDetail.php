@@ -2,16 +2,10 @@
 
 namespace App\Livewire\Manajerial;
 
-use Livewire\Component;
 use App\Models\Machine;
 use App\Models\OeeRecord;
-use App\Models\Production;
-use App\Models\Shift;
-use App\Models\Product;
-use App\Models\QualityCheck;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Livewire\Attributes\On;
+use Livewire\Component;
 
 class OeeDetail extends Component
 {
@@ -20,22 +14,9 @@ class OeeDetail extends Component
     public $averageAvailability;
     public $averagePerformance;
     public $averageQuality;
-    public $chartData;
     public $oeeScore;
     public $lastUpdated;
     public $refreshInterval = 300000; // 5 menit dalam milidetik
-    
-    // Properti untuk perhitungan OEE
-    public $plannedProductionTime = 0;
-    public $operatingTime = 0;
-    public $downtimeProblems = 0;
-    public $downtimeMaintenance = 0;
-    public $totalDowntime = 0;
-    public $downtime = 0;
-    public $idealCycleTime = 0;
-    public $totalOutput = 0;
-    public $defectCount = 0;
-    public $goodOutput = 0;
 
     public function mount($machineId)
     {
@@ -43,127 +24,72 @@ class OeeDetail extends Component
         $this->loadData();
     }
 
-    #[On('refresh-oee-detail')]
-    public function refreshData()
-    {
-        $this->loadData();
-    }
-
     public function loadData()
     {
-        $startTime = microtime(true);
-        
-        $query = Production::where('machine_id', $this->machine->id)
-            ->with(['shift', 'product', 'problems', 'productionDowntimes', 'qualityChecks']);
+        $query = OeeRecord::where('machine_id', $this->machine->id);
 
-        // Filter berdasarkan periode
         switch ($this->selectedPeriod) {
             case 'daily':
-                $query->whereDate('created_at', Carbon::today());
+                $query->whereDate('date', Carbon::today());
                 break;
             case 'weekly':
-                $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                $query->whereBetween('date', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
                 break;
             case 'monthly':
-                $query->whereMonth('created_at', Carbon::now()->month)
-                      ->whereYear('created_at', Carbon::now()->year);
+                $query->whereMonth('date', Carbon::now()->month)
+                      ->whereYear('date', Carbon::now()->year);
                 break;
         }
 
-        $productions = $query->get();
+        $records = $query->get();
 
-        // Reset calculation variables
-        $this->plannedProductionTime = 0;
-        $this->operatingTime = 0;
-        $this->totalOutput = 0;
-        $this->goodOutput = 0;
-
-        foreach ($productions as $production) {
-            $shift = $production->shift;
-            $product = Product::find($production->product_id);
-
-            if (!$shift || !$product) {
-                continue;
-            }
-
-            // Update perhitungan downtime
-            $this->downtimeProblems = $production->problems()->sum('duration') ?? 0;
-            $this->downtimeMaintenance = $production->productionDowntimes()->sum('duration_minutes') ?? 0;
-            $this->totalDowntime = $this->downtimeProblems + $this->downtimeMaintenance;
-
-            // Update perhitungan waktu
-            $this->plannedProductionTime += $shift->planned_operation_time ?? 0;
-            $this->operatingTime += ($shift->planned_operation_time - $this->totalDowntime);
-            
-            // Update data produksi
-            $this->idealCycleTime = $product->cycle_time ?? 0;
-            $this->totalOutput += $production->total_production ?? 0;
-            
-            // Update data kualitas
-            $this->defectCount += $production->qualityChecks->sum('defect_count') ?? 0;
-            $this->goodOutput += ($production->total_production - $this->defectCount);
-        }
-
-        // Get OEE Records
-        $records = OeeRecord::where('machine_id', $this->machine->id)
-            ->when($this->selectedPeriod === 'daily', function($q) {
-                return $q->whereDate('date', Carbon::today());
-            })
-            ->when($this->selectedPeriod === 'weekly', function($q) {
-                return $q->whereBetween('date', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
-            })
-            ->when($this->selectedPeriod === 'monthly', function($q) {
-                return $q->whereMonth('date', Carbon::now()->month)
-                    ->whereYear('date', Carbon::now()->year);
-            })
-            ->orderBy('date', 'asc')
-            ->get();
-
-        // Calculate averages from OEE Records
-        $this->averageAvailability = round($records->avg('availability_rate') ?? 0, 2);
-        $this->averagePerformance = round($records->avg('performance_rate') ?? 0, 2);
-        $this->averageQuality = round($records->avg('quality_rate') ?? 0, 2);
-        $this->oeeScore = round($records->avg('oee_score') ?? 0, 2);
-        $this->lastUpdated = $records->max('last_updated') ? Carbon::parse($records->max('last_updated'))->format('d/m/Y H:i:s') : 'Belum ada data';
-
-        // Get the latest record for detailed calculations
-        $latestRecord = $records->last();
-        if ($latestRecord) {
-            $this->plannedProductionTime = $latestRecord->planned_production_time;
-            $this->operatingTime = $latestRecord->operating_time;
-            $this->downtimeProblems = $latestRecord->downtime_problems;
-            $this->downtimeMaintenance = $latestRecord->downtime_maintenance;
-            $this->totalDowntime = $latestRecord->total_downtime;
-            $this->downtime = $this->plannedProductionTime - $this->operatingTime;
-            $this->totalOutput = $latestRecord->total_output;
-            $this->goodOutput = $latestRecord->good_output;
-            $this->defectCount = $latestRecord->defect_count;
-            $this->idealCycleTime = $latestRecord->ideal_cycle_time;
-        }
-
-        // Prepare chart data
-        $this->chartData = [
-            'labels' => $records->pluck('date')->map(fn($date) => Carbon::parse($date)->format('d/m/Y'))->toArray(),
-            'availability' => $records->pluck('availability_rate')->toArray(),
-            'performance' => $records->pluck('performance_rate')->toArray(),
-            'quality' => $records->pluck('quality_rate')->toArray(),
-            'oee' => $records->pluck('oee_score')->toArray()
-        ];
-        
-        $endTime = microtime(true);
-        $duration = round($endTime - $startTime, 2);
-        Log::info("OEE detail data loaded in {$duration} seconds for machine {$this->machine->id}");
-        
-        $this->dispatch('chartDataUpdated', $this->chartData);
+        // Hitung rata-rata
+        $this->averageAvailability = $records->avg('availability_rate') ?? 0;
+        $this->averagePerformance = $records->avg('performance_rate') ?? 0;
+        $this->averageQuality = $records->avg('quality_rate') ?? 0;
+        $this->oeeScore = ($this->averageAvailability * $this->averagePerformance * $this->averageQuality) / 10000;
+        $this->lastUpdated = now()->format('H:i:s');
     }
 
-    public function updatedSelectedPeriod()
+    public function getChartData()
     {
-        $this->loadData();
+        $records = OeeRecord::where('machine_id', $this->machine->id)
+            ->when($this->selectedPeriod === 'daily', function($query) {
+                return $query->whereDate('created_at', Carbon::today());
+            })
+            ->when($this->selectedPeriod === 'weekly', function($query) {
+                return $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+            })
+            ->when($this->selectedPeriod === 'monthly', function($query) {
+                return $query->whereMonth('created_at', Carbon::now()->month)
+                            ->whereYear('created_at', Carbon::now()->year);
+            })
+            ->orderBy('created_at')
+            ->get();
+    
+        return [
+            'labels' => $records->pluck('created_at')->map(fn($date) => $date->format('H:i')),
+            'availability' => $records->pluck('availability_rate'),
+            'performance' => $records->pluck('performance_rate'),
+            'quality' => $records->pluck('quality_rate'),
+            'oee' => $records->pluck('oee_score')
+        ];
     }
 
     public function render()
     {
-        return view('livewire.manajerial.oee-detail');
+        $chartData = $this->getChartData();
+        $this->dispatch('updateChartData', $chartData);
+        
+        return view('livewire.manajerial.oee-detail', [
+            'chartData' => $chartData,
+            'machine' => $this->machine,
+            'selectedPeriod' => $this->selectedPeriod,
+            'averageAvailability' => $this->averageAvailability,
+            'averagePerformance' => $this->averagePerformance,
+            'averageQuality' => $this->averageQuality,
+            'oeeScore' => $this->oeeScore,
+            'lastUpdated' => $this->lastUpdated,
+        ]);
     }
 }

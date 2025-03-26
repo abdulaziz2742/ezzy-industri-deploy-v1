@@ -6,19 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class SopStep extends Model
 {
+    protected $table = 'sop_steps';
+    
     protected $fillable = [
         'sop_id',
         'urutan',
         'judul',
         'deskripsi',
         'gambar_path',
+        'cloudinary_id', // Tambahkan ini
         'is_checkpoint',
         'needs_standard',
         'nilai_standar',
         'toleransi_min',
         'toleransi_max',
-        'measurement_type',
         'measurement_unit',
+        'measurement_type',
         'interval_value',
         'interval_unit'
     ];

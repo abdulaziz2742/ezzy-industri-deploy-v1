@@ -35,7 +35,7 @@
                             <div class="row mb-3">
                                 <label class="col-sm-3 col-form-label">Total Produksi</label>
                                 <div class="col-sm-9">
-                                    <input type="number" class="form-control" wire:model="totalProduction">
+                                    <input type="number" class="form-control" wire:model.live="totalProduction" min="1" required>
                                     @error('totalProduction') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
                             </div>

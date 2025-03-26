@@ -81,13 +81,24 @@
                                 <td>{{ $step->judul }}</td>
                                 <td>{{ $step->deskripsi }}</td>
                                 <td class="text-center">
-                                    @if($step->gambar_path)
+                                    @if($step->cloudinary_url)
                                         <div class="step-image">
-                                            <img src="{{ Storage::url($step->gambar_path) }}" 
+                                            <img src="{{ $step->cloudinary_url }}" 
                                                  alt="Step Image" 
                                                  class="img-fluid"
-                                                 style="max-height: 80px;">
+                                                 style="max-height: 80px; cursor: pointer;"
+                                                 onclick="window.open(this.src, '_blank')">
                                         </div>
+                                    @elseif($step->cloudinary_id)
+                                        <div class="step-image">
+                                            <img src="https://res.cloudinary.com/dncabigef/image/upload/v1/{{ $step->cloudinary_id }}" 
+                                                 alt="Step Image" 
+                                                 class="img-fluid"
+                                                 style="max-height: 80px; cursor: pointer;"
+                                                 onclick="window.open(this.src, '_blank')">
+                                        </div>
+                                    @else
+                                        <span class="text-muted">-</span>
                                     @endif
                                 </td>
                                 <td>

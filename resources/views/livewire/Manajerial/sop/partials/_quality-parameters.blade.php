@@ -29,15 +29,22 @@
                         Every {{ $step->interval_value }} {{ $step->interval_unit }}
                     </td>
                     <td class="text-center">
-                        @if($step->gambar_path)
-                            <img src="{{ asset('storage/' . $step->gambar_path) }}" 
-                                 alt="Step Image" 
+                        @if($step->cloudinary_url)
+                            <img src="{{ $step->cloudinary_url }}" 
+                                 alt="Quality Parameter Image" 
                                  class="img-thumbnail" 
-                                 style="max-height: 50px;"
+                                 style="max-height: 50px; cursor: pointer;"
+                                 onclick="window.open(this.src, '_blank')"
+                            >
+                        @elseif($step->cloudinary_id)
+                            <img src="https://res.cloudinary.com/dncabigef/image/upload/v1/{{ $step->cloudinary_id }}" 
+                                 alt="Quality Parameter Image" 
+                                 class="img-thumbnail" 
+                                 style="max-height: 50px; cursor: pointer;"
                                  onclick="window.open(this.src, '_blank')"
                             >
                         @else
-                            -
+                            <span class="text-muted">-</span>
                         @endif
                     </td>
                     <td class="text-center">

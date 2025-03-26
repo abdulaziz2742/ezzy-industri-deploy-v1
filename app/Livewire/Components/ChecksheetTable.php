@@ -16,6 +16,8 @@ use App\Models\ChecksheetEntry;
 use App\Models\Sop;
 use Illuminate\Support\Facades\Redirect;
 use App\Models\Shift;
+use App\Models\OeeRecord;
+use Illuminate\Support\Facades\Http;
 
 class ChecksheetTable extends Component
 {
@@ -28,6 +30,7 @@ class ChecksheetTable extends Component
     public $checkResults = [];  // Add this
     public $notes = [];        // Add this
     public $photos = [];       // Add this
+    public $previewUrl = [];
     
     
     public function mount($machineId, $shiftId)
@@ -105,46 +108,65 @@ class ChecksheetTable extends Component
         ]);
     }
 
+    // Hapus method updatedPhotos karena kita menggunakan Alpine.js untuk upload
+
     public function startProduction()
     {
         try {
-            Log::info('Starting production process');
+            Log::info('Starting checksheet validation');
             
-            DB::beginTransaction();
-            
+            // Get pending production from session
             $pendingProduction = session('pending_production');
-            
-            // Create production record
+            if (!$pendingProduction) {
+                throw new \Exception('Data produksi tidak ditemukan');
+            }
+
+            DB::beginTransaction();
+
+            // Create the production record
             $production = Production::create([
                 'user_id' => Auth::id(),
-                'machine_id' => $this->machineId,
-                'machine' => Machine::find($this->machineId)->name,
+                'machine_id' => $pendingProduction['machine_id'],
+                'machine' => $pendingProduction['machine_name'],
                 'product_id' => $pendingProduction['product_id'],
-                'product' => $pendingProduction['product'],
-                'target_per_shift' => $pendingProduction['target_per_shift'],
-                'shift_id' => $this->shiftId,
+                'product' => $pendingProduction['product_name'],
+                'shift_id' => $pendingProduction['shift_id'],
                 'status' => 'running',
                 'start_time' => now(),
+                'planned_production_time' => $pendingProduction['planned_production_time'],
+                'cycle_time' => $pendingProduction['cycle_time'],
+                'target_per_shift' => $pendingProduction['target_per_shift'],
+                'ideal_cycle_time' => $pendingProduction['cycle_time']
+            ]);
+
+            // Create initial OEE record
+            OeeRecord::create([
+                'production_id' => $production->id,
+                'machine_id' => $pendingProduction['machine_id'],
+                'shift_id' => $pendingProduction['shift_id'],
+                'date' => now(),
+                'planned_production_time' => $pendingProduction['planned_production_time'],
+                'operating_time' => 0,
+                'total_downtime' => 0,
+                'total_output' => 0,
+                'good_output' => 0,
+                'ideal_cycle_time' => $pendingProduction['cycle_time'],
+                'availability_rate' => 0,
+                'performance_rate' => 0,
+                'quality_rate' => 0,
+                'oee_score' => 0
             ]);
     
-            // HAPUS loop pertama ini karena duplikat
-            // foreach ($this->checkResults as $taskId => $result) {
-            //     ChecksheetEntry::create([...]);
-            // }
-    
-            // Gunakan hanya satu loop ini dengan logging
-            // Di dalam method startProduction()
+            // Save checksheet entries
             foreach ($this->checkResults as $taskId => $result) {
                 $task = MaintenanceTask::find($taskId);
                 
                 // Get shift start time for next check
                 $shiftIds = json_decode($task->shift_ids);
-                $shift = Shift::find($shiftIds[0]); // Get first assigned shift
+                $shift = Shift::find($shiftIds[0]);
                 $nextCheckTime = now()->addDay()->format('Y-m-d') . ' ' . $shift->start_time;
-                
-                // Subtract 1 hour from shift start time
                 $nextCheckDue = \Carbon\Carbon::parse($nextCheckTime)->subHour();
-                
+    
                 $checksheetEntry = ChecksheetEntry::create([
                     'production_id' => $production->id,
                     'task_id' => $taskId,
@@ -153,29 +175,24 @@ class ChecksheetTable extends Component
                     'user_id' => Auth::id(),
                     'result' => $result,
                     'notes' => $this->notes[$taskId] ?? null,
-                    'photo_path' => isset($this->photos[$taskId]) ? $this->photos[$taskId]->store('photos', 'public') : null,
+                    'cloudinary_url' => $photoData['url'] ?? null,
+                    'cloudinary_id' => $photoData['public_id'] ?? null,
                 ]);
     
-                Log::info("Task Check Completed", [
+                Log::info("Checksheet Entry Created", [
                     'task_name' => $task->task_name,
-                    'frequency' => $task->frequency,
-                    'check_date' => $checksheetEntry->created_at->format('Y-m-d H:i:s'),
-                    'next_check_due' => match($task->frequency) {
-                        'daily' => $nextCheckDue->format('Y-m-d H:i:s'),
-                        'weekly' => $nextCheckDue->addWeeks(1)->format('Y-m-d H:i:s'),
-                        'monthly' => $nextCheckDue->addMonths(1)->format('Y-m-d H:i:s'),
-                        default => 'unknown'
-                    }
+                    'production_id' => $production->id,
+                    'result' => $result
                 ]);
             }
-    
+        
             DB::commit();
             
             return redirect()->route('production.status');
     
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error in startProduction: ' . $e->getMessage());
+            Log::error('Error in production start: ' . $e->getMessage());
             session()->flash('error', 'Terjadi kesalahan saat memulai produksi');
             return null;
         }

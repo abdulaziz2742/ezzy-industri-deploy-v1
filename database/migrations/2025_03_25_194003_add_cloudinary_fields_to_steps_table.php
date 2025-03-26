@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::table('oee_records', function (Blueprint $table) {
-            $table->boolean('is_initial_record')->default(false)->after('oee_score');
+        Schema::table('sop_steps', function (Blueprint $table) {
+            $table->string('cloudinary_id')->nullable()->after('gambar_path');
         });
     }
 
     public function down()
     {
-        Schema::table('oee_records', function (Blueprint $table) {
-            $table->dropColumn('is_initial_record');
+        Schema::table('sop_steps', function (Blueprint $table) {
+            $table->dropColumn('cloudinary_id');
         });
     }
 };

@@ -4,15 +4,27 @@ namespace App\Livewire\Manajerial\Production;
 
 use Livewire\Component;
 use App\Models\ProductionProblem;
+use Illuminate\Support\Facades\Log;
 
 class ProblemApproval extends Component
 {
     public function render()
     {
+        $problems = ProductionProblem::with(['production', 'production.machine'])
+            ->orderBy('reported_at', 'desc')
+            ->get();
+
+        // Add logging to check image URLs
+        foreach($problems as $problem) {
+            Log::info('Problem image data:', [
+                'problem_id' => $problem->id,
+                'cloudinary_url' => $problem->cloudinary_url,
+                'cloudinary_id' => $problem->cloudinary_id
+            ]);
+        }
+
         return view('livewire.manajerial.production.problem-approval', [
-            'problems' => ProductionProblem::with(['production', 'production.machine'])  // tambahkan relasi machine
-                ->orderBy('reported_at', 'desc')
-                ->get()
+            'problems' => $problems
         ]);
     }
 

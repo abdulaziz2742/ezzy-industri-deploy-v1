@@ -167,12 +167,6 @@
                                 @include('livewire.manajerial.sop.partials._production-form')
                             @endif
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" wire:click="closeModal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">
-                                {{ $isEditing ? 'Update' : 'Save' }}
-                            </button>
-                        </div>
                     </form>
                 </div>
             </div>

@@ -9,18 +9,25 @@ class QualityCheck extends Model
     protected $fillable = [
         'production_id',
         'user_id',
-        'sample_size',
-        'notes',
         'check_time',
+        'sample_size',
         'status',
-        'defect_count',    // Tambahkan ini
-        'defect_type',     // Tambahkan ini
-        'defect_notes'     // Tambahkan ini
+        'notes',
+        'defect_count',
+        'defect_type',
+        'defect_notes'
     ];
 
     protected $casts = [
-        'check_time' => 'datetime'
+        'check_time' => 'datetime',
+        'sample_size' => 'integer',
+        'defect_count' => 'integer'
     ];
+
+    public function details()
+    {
+        return $this->hasMany(QualityCheckDetail::class);
+    }
 
     public function production()
     {
@@ -30,10 +37,5 @@ class QualityCheck extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function details()
-    {
-        return $this->hasMany(QualityCheckDetail::class);
     }
 }

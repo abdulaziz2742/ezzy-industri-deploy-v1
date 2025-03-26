@@ -16,6 +16,13 @@ class QualityCheckDetail extends Model
         'status'
     ];
 
+    protected $casts = [
+        'standard_value' => 'decimal:6',
+        'measured_value' => 'decimal:6',
+        'tolerance_min' => 'decimal:6',
+        'tolerance_max' => 'decimal:6'
+    ];
+
     public function qualityCheck()
     {
         return $this->belongsTo(QualityCheck::class);

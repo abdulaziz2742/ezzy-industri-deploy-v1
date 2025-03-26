@@ -61,7 +61,7 @@
                         <p class="card-text">Monitor status produksi dan penanganan masalah.</p>
                         <div class="d-grid gap-2">
                             <a href="{{ route('manajerial.production.problems') }}" class="btn btn-primary">Lihat Problems</a>
-                            <a href="#" class="btn btn-outline-primary" wire:navigate>Laporan Produksi</a>
+                            <a href="{{ route('manajerial.oee.dashboard') }}" class="btn btn-outline-primary">OEE Dashboard</a>
                         </div>
                     </div>
                 </div>

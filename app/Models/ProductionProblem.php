@@ -13,6 +13,8 @@ class ProductionProblem extends Model
         'problem_type',
         'notes',
         'image_path',
+        'cloudinary_url',   // Add this
+        'cloudinary_id',    // Add this
         'status',
         'reported_at',
         'approved_at',

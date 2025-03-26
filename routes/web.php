@@ -20,6 +20,7 @@ use App\Livewire\Manajerial\OeeDashboard;
 use App\Livewire\Manajerial\OeeDetail;
 use App\Http\Controllers\OeePdfController;
 use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\ImageUploadController;
 
 
 
@@ -60,19 +61,14 @@ Route::prefix('manajerial')->middleware(['auth', 'role:manajerial'])->group(func
     Route::get('/users', \App\Livewire\Manajerial\Manajemen\UserManagement::class)->name('manajerial.users');
     Route::get('/karyawan/detail-pdf/{userId}/{dateFrom}/{dateTo}', [KaryawanDetailPdfController::class, 'generate'])
     ->name('karyawan.detail.pdf');
-    Route::get('/oee-dashboard', \App\Livewire\Manajerial\OeeDashboard::class)
-    ->name('manajerial.oee-dashboard');
-    // Ganti route ini
-    Route::get('/manajerial/oee/{machineId}/detail', \App\Livewire\Manajerial\OeeDetail::class)
-    ->name('manajerial.oee.detail');
     
-    // Menjadi
-    Route::get('/oee/{machineId}/detail', \App\Livewire\Manajerial\OeeDetail::class)
-    ->name('manajerial.oee-detail');
+     // Add these new OEE routes
+     Route::get('/oee/dashboard', OeeDashboard::class)->name('manajerial.oee.dashboard');
+     Route::get('/oee/{machineId}/detail', OeeDetail::class)->name('manajerial.oee.detail');
     
-    // Add these OEE PDF routes
     Route::get('/oee/dashboard/pdf', [OeePdfController::class, 'generateDashboardPdf'])
         ->name('manajerial.oee.dashboard.pdf');
+        
     Route::get('/oee/{machineId}/detail/pdf', [OeePdfController::class, 'generateDetailPdf'])
         ->name('manajerial.oee.detail.pdf');
 });
@@ -201,3 +197,5 @@ Route::get('/whatsapp/send-simple-test', function () {
         return "Error: " . $e->getMessage();
     }
 })->name('whatsapp.send-simple-test');
+
+Route::post('/upload-image', [ImageUploadController::class, 'store'])->name('upload.image');
