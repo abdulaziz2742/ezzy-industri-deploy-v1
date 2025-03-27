@@ -56,15 +56,8 @@ class OeeAlertNotification extends Notification implements ShouldQueue
         }
         
         $machineName = is_object($this->machine) ? $this->machine->name : 'Unknown Machine';
+        $url = route('manajerial.machines.show', ['machine' => $this->machine->id]);
         
-        Log::info('Preparing OEE Alert email', [
-            'to' => $notifiable->routes['mail'],
-            'machine' => $machineName,
-            'oee_score' => $this->oeeScore,
-            'target_oee' => $this->targetOee,
-            'difference' => $this->difference
-        ]);
-
         return (new MailMessage)
             ->subject('ALERT: OEE Di Bawah Target untuk ' . $machineName)
             ->view('emails.oee-alert', [
@@ -73,7 +66,8 @@ class OeeAlertNotification extends Notification implements ShouldQueue
                 'oeeScore' => $this->oeeScore,
                 'targetOee' => $this->targetOee,
                 'difference' => $this->difference,
-                'production' => $production
+                'production' => $production,
+                'url' => $url
             ]);
     }
 

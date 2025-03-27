@@ -91,7 +91,7 @@
             
             <!-- Action Button -->
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{{ $url }}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 500; text-align: center; box-shadow: 0 4px 10px rgba(0,123,255,0.3); transition: all 0.3s;">Lihat Detail Mesin</a>
+                <a href="{{ $url ?? route('manajerial.dashboard') }}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 500; text-align: center; box-shadow: 0 4px 10px rgba(0,123,255,0.3); transition: all 0.3s;">Lihat Detail Mesin</a>
             </div>
             
             <p style="margin: 25px 0; padding: 15px; background-color: #f8f9fa; border-radius: 4px; font-size: 15px; color: #555; line-height: 1.6;">
