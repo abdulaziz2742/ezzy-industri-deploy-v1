@@ -63,7 +63,7 @@
                 <h2 style="margin-top: 0; color: #333; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px;">🏭 Detail Produksi</h2>
                 
                 <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                    @if(isset($production->product) && $production->product)
+                    @if(isset($production->product) && $production->product && isset($production->product->name))
                     <tr>
                         <td style="padding: 10px; border-bottom: 1px solid #eee; color: #666; width: 40%;">Produk</td>
                         <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: 500;">{{ $production->product->name }}</td>
