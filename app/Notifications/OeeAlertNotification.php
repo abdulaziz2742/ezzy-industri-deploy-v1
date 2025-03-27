@@ -56,7 +56,8 @@ class OeeAlertNotification extends Notification implements ShouldQueue
         }
         
         $machineName = is_object($this->machine) ? $this->machine->name : 'Unknown Machine';
-        $url = route('manajerial.machines.show', ['machine' => $this->machine->id]);
+        // Change to use dashboard route instead
+        $url = route('manajerial.dashboard');
         
         return (new MailMessage)
             ->subject('ALERT: OEE Di Bawah Target untuk ' . $machineName)
