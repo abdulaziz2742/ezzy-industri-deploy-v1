@@ -137,7 +137,7 @@ class MaintenanceTaskManagement extends Component
             ->orderBy('created_at', 'desc')
             ->paginate(10);
     
-        return view('livewire.Manajerial.manajemen.maintenance-task-management', [
+        return view('livewire.manajerial.manajemen.maintenance-task-management', [  // Changed from Manajerial to manajerial
             'tasks' => $tasks,
             'machines' => Machine::all(),
             'shifts' => Shift::all(),
