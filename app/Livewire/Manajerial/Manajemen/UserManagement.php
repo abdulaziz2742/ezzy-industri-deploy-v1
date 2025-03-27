@@ -29,17 +29,36 @@ class UserManagement extends Component
         'department_id' => 'nullable|exists:departments,id'
     ];
 
+    // Add protected property for pagination theme
+    protected $paginationTheme = 'bootstrap';
+
+    // Fix the render method for better search
     public function render()
     {
-        $users = User::with('department')
-                    ->where('name', 'like', '%'.$this->search.'%')
-                    ->orWhere('email', 'like', '%'.$this->search.'%')
-                    ->paginate(10);
+        $users = User::query()
+            ->with('department')
+            ->where(function($query) {
+                $query->where('name', 'like', '%'.$this->search.'%')
+                      ->orWhere('email', 'like', '%'.$this->search.'%');
+            })
+            ->paginate(10);
 
         return view('livewire.manajerial.manajemen.user-management', [
             'users' => $users,
             'departments' => Department::all()
         ]);
+    }
+
+    // Add resetForm method
+    public function resetForm()
+    {
+        $this->reset(['name', 'email', 'role', 'password', 'department_id', 'isEditing', 'userId']);
+    }
+
+    // Add updatedSearch method for live search
+    public function updatedSearch()
+    {
+        $this->resetPage();
     }
 
     public function create()
