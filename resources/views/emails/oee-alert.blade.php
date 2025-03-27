@@ -152,9 +152,6 @@
 
 <p>Silakan periksa dashboard OEE untuk detail lebih lanjut.</p>
 
-@component('mail::button', ['url' => url('/manajerial/oee-dashboard')])
-Lihat Dashboard OEE
-@endcomponent
 
 Terima kasih,<br>
 {{ config('app.name') }}
