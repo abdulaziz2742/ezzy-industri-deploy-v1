@@ -110,7 +110,7 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-center">
+            <div>
                 {{ $users->links() }}
             </div>
         </div>

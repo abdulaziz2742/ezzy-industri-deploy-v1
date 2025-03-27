@@ -12,6 +12,7 @@ class UserManagement extends Component
 {
     use WithPagination;
 
+    // Move existing properties below these two lines
     public $name;
     public $email;
     public $role = 'karyawan';
@@ -29,8 +30,6 @@ class UserManagement extends Component
         'department_id' => 'nullable|exists:departments,id'
     ];
 
-    // Add protected property for pagination theme
-    protected $paginationTheme = 'bootstrap';
 
     // Fix the render method for better search
     public function render()
