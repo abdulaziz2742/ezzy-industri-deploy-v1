@@ -70,9 +70,10 @@ class FinishProduction extends Component
             $oeeRecord = OeeRecord::where('production_id', $this->production->id)->first();
             
             // Hitung rate
-            $availabilityRate = ($operatingTime / $plannedTime) * 100;
-            $performanceRate = ($this->totalProduction * $this->production->cycle_time / $operatingTime) * 100;
-            $qualityRate = ($this->totalProduction > 0) ? (($this->totalProduction - $totalDefects) / $this->totalProduction) * 100 : 0;
+            // Pastikan perhitungan OEE benar
+            $availabilityRate = $operatingTime > 0 ? ($operatingTime / $plannedTime) * 100 : 0;
+            $performanceRate = $operatingTime > 0 ? ($this->totalProduction * $this->production->cycle_time / $operatingTime) * 100 : 0;
+            $qualityRate = $this->totalProduction > 0 ? (($this->totalProduction - $totalDefects) / $this->totalProduction) * 100 : 0;
             
             // Hitung OEE Score
             $oeeScore = ($availabilityRate * $performanceRate * $qualityRate) / 10000;
@@ -113,14 +114,17 @@ class FinishProduction extends Component
                 }
 
                 // Send email if email is configured
-                if ($machine->alert_email) {
-                    Notification::route('mail', $machine->alert_email)
-                        ->notify(new OeeAlertNotification(
-                            $machine,
-                            $oeeScore,
-                            $machine->oee_target,
-                            $this->production->id
-                        ));
+                // Saat mengirim notifikasi
+                if ($machine && $oeeScore < $machine->oee_target && $machine->alert_enabled) {
+                    if ($machine->alert_email) {
+                        Notification::route('mail', $machine->alert_email)
+                            ->notify(new OeeAlertNotification(
+                                $machine,
+                                round($oeeScore, 2), // Round untuk presisi 2 angka
+                                $machine->oee_target,
+                                $this->production->id
+                            ));
+                    }
                 }
             }
         });
