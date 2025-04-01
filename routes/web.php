@@ -30,6 +30,10 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
+Route::get('/documentation', function () {
+    return view('documentation.index');
+})->name('documentation');
+
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 Route::get('/production/{productionId}/report', ProductionReport::class)->name('production.report');

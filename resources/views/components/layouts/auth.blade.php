@@ -160,10 +160,33 @@
             color: rgba(255,255,255,0.8);
             font-size: 16px;
         }
+
+        .doc-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .doc-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
 <body>
+    <a href="{{ route('documentation') }}" class="doc-button">
+        Documentation
+    </a>
     <div class="login-container">
         <div class="login-image">
             <div class="night-scene">
