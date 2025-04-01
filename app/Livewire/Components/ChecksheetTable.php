@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Redirect;
 use App\Models\Shift;
 use App\Models\OeeRecord;
 use Illuminate\Support\Facades\Http;
+use App\Models\Product;
 
 class ChecksheetTable extends Component
 {
@@ -123,6 +124,11 @@ class ChecksheetTable extends Component
 
             DB::beginTransaction();
 
+            // Generate batch number
+            $shift = Shift::find($pendingProduction['shift_id']);
+            $product = Product::find($pendingProduction['product_id']);
+            $batchNumber = Production::generateBatchNumber($shift, $product);
+
             // Create the production record
             $production = Production::create([
                 'user_id' => Auth::id(),
@@ -130,13 +136,15 @@ class ChecksheetTable extends Component
                 'machine' => $pendingProduction['machine_name'],
                 'product_id' => $pendingProduction['product_id'],
                 'product' => $pendingProduction['product_name'],
+                'product_code' => $product->code,  // Gunakan code, bukan product_code
                 'shift_id' => $pendingProduction['shift_id'],
                 'status' => 'running',
                 'start_time' => now(),
                 'planned_production_time' => $pendingProduction['planned_production_time'],
                 'cycle_time' => $pendingProduction['cycle_time'],
                 'target_per_shift' => $pendingProduction['target_per_shift'],
-                'ideal_cycle_time' => $pendingProduction['cycle_time']
+                'ideal_cycle_time' => $pendingProduction['cycle_time'],
+                'batch_number' => $batchNumber
             ]);
 
             // Create initial OEE record

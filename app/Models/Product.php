@@ -14,7 +14,8 @@ class Product extends Model
         'target_per_hour',
         'target_per_shift',
         'target_per_day',
-        'cycle_time'  // Add this
+        'cycle_time',  // Add this
+        'product_code'
     ];
 
     protected $casts = [

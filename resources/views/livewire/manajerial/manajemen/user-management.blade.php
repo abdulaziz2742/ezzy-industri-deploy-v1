@@ -21,12 +21,17 @@
 
             <form wire:submit.prevent="{{ $isEditing ? 'update' : 'create' }}">
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Nama</label>
                         <input type="text" class="form-control" wire:model="name">
                         @error('name') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <label class="form-label">ID Karyawan</label>
+                        <input type="text" class="form-control" wire:model="employee_id">
+                        @error('employee_id') <span class="text-danger">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Email</label>
                         <input type="email" class="form-control" wire:model="email">
                         @error('email') <span class="text-danger">{{ $message }}</span> @enderror
@@ -53,14 +58,16 @@
                         @error('department_id') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                 </div>
+
                 @if(!$isEditing)
-                <div class="col-md-6">
-                    <label class="form-label">Password</label>
-                    <input type="password" class="form-control" wire:model="password">
-                    @error('password') <span class="text-danger">{{ $message }}</span> @enderror
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" wire:model="password">
+                        @error('password') <span class="text-danger">{{ $message }}</span> @enderror
+                    </div>
                 </div>
                 @endif
-                </div>
 
                 <div class="text-end">
                     @if($isEditing)
@@ -83,6 +90,7 @@
                     <thead>
                         <tr>
                             <th>Nama</th>
+                            <th>ID Karyawan</th>
                             <th>Email</th>
                             <th>Role</th>
                             <th>Departemen</th>
@@ -93,6 +101,7 @@
                         @foreach($users as $user)
                             <tr>
                                 <td>{{ $user->name }}</td>
+                                <td>{{ $user->employee_id }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>{{ ucfirst($user->role) }}</td>
                                 <td>{{ $user->department->name ?? '-' }}</td>
@@ -109,8 +118,6 @@
                     </tbody>
                 </table>
             </div>
-
-           
         </div>
     </div>
 </div>

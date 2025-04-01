@@ -12,6 +12,7 @@ use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Product;  // Tambahkan ini di bagian atas
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class StartProduction extends Component
 {
@@ -85,6 +86,45 @@ class StartProduction extends Component
         }
     }
 
+    public function start()
+    {
+        $this->validate();
+
+        try {
+            DB::transaction(function () {
+                $shift = Shift::find($this->shift_id);
+                $product = Product::find($this->product_id);
+                
+                // Generate batch number
+                $batchNumber = Production::generateBatchNumber($shift, $product);
+
+                // Create production record
+                $production = Production::create([
+                    'batch_number' => $batchNumber,
+                    'machine_id' => $this->machine_id,
+                    'shift_id' => $this->shift_id,
+                    'product_id' => $this->product_id,
+                    'product' => $product->name,
+                    'product_code' => $product->code,
+                    'cycle_time' => $product->cycle_time,
+                    'target_per_hour' => $product->target_per_hour,
+                    'target_per_shift' => $product->target_per_shift,
+                    'planned_production_time' => $shift->duration_minutes,
+                    'start_time' => now(),
+                    'status' => 'running'
+                ]);
+
+                // ... kode existing untuk create OEE record ...
+            });
+
+            return redirect()->route('production.status')->with('message', 'Production started successfully');
+        } catch (\Exception $e) {
+            Log::error('Error starting production: ' . $e->getMessage());
+            session()->flash('error', 'Failed to start production. Please try again.');
+            return null;
+        }
+    }
+    
     public function startProduction()
     {
         $this->validate();

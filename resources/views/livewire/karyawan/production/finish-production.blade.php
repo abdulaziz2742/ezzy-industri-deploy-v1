@@ -43,8 +43,17 @@
                             <div class="row mb-3">
                                 <label class="col-sm-3 col-form-label">Total Reject</label>
                                 <div class="col-sm-9">
-                                    <input type="number" class="form-control" wire:model="totalReject">
-                                    @error('totalReject') <span class="text-danger">{{ $message }}</span> @enderror
+                                    <input type="number" 
+                                           class="form-control" 
+                                           wire:model="totalReject"
+                                           min="{{ $totalQualityNG }}"
+                                           required>
+                                    @error('totalReject') 
+                                        <span class="text-danger">{{ $message }}</span> 
+                                    @enderror
+                                    <small class="text-muted">
+                                        Minimal total reject: {{ $totalQualityNG }} (dari Quality Check)
+                                    </small>
                                 </div>
                             </div>
 
@@ -97,23 +106,30 @@
     </div>
 
 
+    <!-- Tambahkan ini sebelum penutup div terakhir -->
+    @include('livewire.karyawan.production.partials.ng-report-modal')
+
     <script>
-        // Initialize modal when component loads
         let finishModal;
+        let ngReportModal;
         
         document.addEventListener('DOMContentLoaded', () => {
             finishModal = new bootstrap.Modal(document.getElementById('finishModal'));
-            console.log('Modal initialized');
+            ngReportModal = new bootstrap.Modal(document.getElementById('ngReportModal'));
         });
 
-        // Listen for the finish event
         document.addEventListener('livewire:initialized', () => {
+            Livewire.on('show-ng-report-modal', () => {
+                ngReportModal.show();
+            });
+
+            Livewire.on('hide-ng-report-modal', () => {
+                ngReportModal.hide();
+            });
+
             Livewire.on('finish-success', () => {
-                console.log('Showing modal');
                 if (finishModal) {
                     finishModal.show();
-                } else {
-                    console.error('Modal not initialized');
                 }
             });
         });

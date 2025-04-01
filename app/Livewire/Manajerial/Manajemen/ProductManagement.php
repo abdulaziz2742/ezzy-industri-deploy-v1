@@ -9,6 +9,7 @@ class ProductManagement extends Component
 {
     public $name;
     public $code;
+    public $product_code; // Tambah ini
     public $description;
     public $target_per_hour;
     public $target_per_shift;
@@ -21,6 +22,7 @@ class ProductManagement extends Component
     protected $rules = [
         'name' => 'required|string|max:255',
         'code' => 'required|string|max:50|unique:products,code',
+        'product_code' => 'required|string|max:50|unique:products,product_code', // Tambah ini
         'description' => 'nullable|string',
         'unit' => 'required|string|max:20',
         'target_per_hour' => 'nullable|integer|min:0',
@@ -37,6 +39,7 @@ class ProductManagement extends Component
         
         $this->name = $product->name;
         $this->code = $product->code;
+        $this->product_code = $product->product_code; // Add this line
         $this->description = $product->description;
         $this->target_per_hour = $product->target_per_hour;
         $this->target_per_shift = $product->target_per_shift;
@@ -52,6 +55,7 @@ class ProductManagement extends Component
         Product::create([
             'name' => $this->name,
             'code' => $this->code,
+            'product_code' => $this->product_code, // Tambah ini
             'description' => $this->description,
             'unit' => $this->unit,
             'target_per_hour' => $this->target_per_hour,
@@ -67,17 +71,19 @@ class ProductManagement extends Component
     public function update()
     {
         $this->rules['code'] = 'required|string|max:50|unique:products,code,' . $this->editId;
+        $this->rules['product_code'] = 'required|string|max:50|unique:products,product_code,' . $this->editId;
         $this->validate();
 
         Product::find($this->editId)->update([
             'name' => $this->name,
             'code' => $this->code,
+            'product_code' => $this->product_code, // Add this line
             'description' => $this->description,
             'unit' => $this->unit,
             'target_per_hour' => $this->target_per_hour,
             'target_per_shift' => $this->target_per_shift,
             'target_per_day' => $this->target_per_day,
-            'cycle_time' => $this->cycle_time  // Add this
+            'cycle_time' => $this->cycle_time
         ]);
 
         $this->cancelEdit();

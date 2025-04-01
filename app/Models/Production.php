@@ -21,6 +21,7 @@ class Production extends Model
         'start_time',
         'end_time',
         'status',
+        'batch_number', // Add this
         'total_production',  // Pastikan field ini ada
         'defect_count',
         'defect_type',
@@ -102,5 +103,29 @@ class Production extends Model
     public function oeeRecord()
     {
         return $this->hasOne(OeeRecord::class);
+    }
+
+    public static function generateBatchNumber($shift, $product)
+    {
+        $date = now()->format('ymd');
+        $productCode = $product->code;
+        
+        // Get last sequence number for today
+        $lastProduction = self::whereDate('created_at', today())
+            ->where('shift_id', $shift->id)
+            ->where('product_id', $product->id)
+            ->orderBy('id', 'desc')
+            ->first();
+            
+        $sequence = $lastProduction ? 
+            (int)substr($lastProduction->batch_number, -3) + 1 : 
+            1;
+            
+        return sprintf("%s-%d-%s-%03d", 
+            $date,
+            $shift->id,
+            $productCode,
+            $sequence
+        );
     }
 }
