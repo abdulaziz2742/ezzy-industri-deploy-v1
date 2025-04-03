@@ -7,6 +7,8 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\URL;
+use Livewire\Livewire;
+use Illuminate\Support\Facades\Route;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,21 +17,16 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    public function boot()
+    public function boot(): void
     {
         Paginator::useBootstrap();
         
-        // Force HTTPS in production
+        // Ganti dengan ini
+        Paginator::defaultView('pagination::bootstrap-5');
+        Paginator::defaultSimpleView('pagination::simple-bootstrap-5');
+    
         if(config('app.env') === 'production' || config('force_https')) {
             URL::forceScheme('https');
         }
-        
-        // Add error handling for pagination views
-        View::share('paginationError', function ($e) {
-            Log::error('Pagination error:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        });
     }
 }

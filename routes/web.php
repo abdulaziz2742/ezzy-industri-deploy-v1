@@ -90,6 +90,9 @@ Route::prefix('karyawan')->middleware(['auth', 'role:karyawan'])->group(function
         ->name('production.finish')
         ->middleware(['auth', 'role:karyawan']);
         Route::get('/production/{productionId}/quality-check', QualityCheckForm::class)->name('production.quality-check');
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/karyawan/history', App\Livewire\Karyawan\ProductionHistory::class)->name('karyawan.history');
+        });
 });
 
 

@@ -175,6 +175,13 @@
             <span>Produksi</span>
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('karyawan.history') ? '' : 'collapsed' }}" 
+           href="{{ route('karyawan.history') }}" wire:navigate>
+            <i class="bi bi-clock-history"></i>
+            <span>History Produksi</span>
+        </a>
+    </li>
     @endif
 
     </ul>
